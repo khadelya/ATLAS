@@ -1,0 +1,4 @@
+input_data/*
+output_data/*
+!input_data/worker-config.json
+!input_data/dataset.yml
