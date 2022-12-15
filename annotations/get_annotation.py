@@ -1,5 +1,7 @@
+from geojson import Feature, Polygon, FeatureCollection
 from pyproj import Transformer, pyproj
 from osgeo import gdal, osr
+import geojson
 import json
 import os
 
@@ -21,6 +23,41 @@ if env_ok:
         json_file_path_manual = config_json["parameters"]["annotations_manual"]
 
 
+def circle_to_polygon(json_file_path):
+    features_new = []
+    with open(json_file_path, "r+") as f:
+        data = json.load(f)
+        features = data["features"]
+        for feature in features:
+            if feature["geometry"]["type"] == "Point":
+                radius = feature["properties"]["radius"]
+                coordinates = feature["geometry"]["coordinates"]
+                xmin, ymin = list(map(lambda x: x - radius, coordinates))
+                xmax, ymax = list(map(lambda x: x + radius, coordinates))
+                feature = Feature(
+                    geometry=Polygon(
+                        [
+                            [
+                                (xmin, ymin),
+                                (xmin, ymax),
+                                (xmax, ymax),
+                                (xmax, ymin),
+                                (xmin, ymin),
+                            ]
+                        ]
+                    )
+                )
+            features_new.append(feature)
+
+    feature_collection = FeatureCollection(features_new)
+
+    with open(
+        json_file_path.replace(".json", "_polygon.json"), "w", encoding="utf-8"
+    ) as f:
+        geojson.dump(feature_collection, f, ensure_ascii=False, indent=2)
+    return
+
+
 def json_to_new_coordinates(tif_file_path, json_file_path):
     ds = gdal.Open(tif_file_path)
     prj = ds.GetProjection()
@@ -30,8 +67,8 @@ def json_to_new_coordinates(tif_file_path, json_file_path):
     transformer = Transformer.from_crs(JSON_EPSG, src_epsg)
 
     with open(json_file_path, "r+") as f:
-        train = json.load(f)
-        features = train["features"]
+        data = json.load(f)
+        features = data["features"]
         for feature in features:
             coordinates = feature["geometry"]["coordinates"][0]
             for coordinate in coordinates:
@@ -43,7 +80,7 @@ def json_to_new_coordinates(tif_file_path, json_file_path):
     with open(
         json_file_path.replace(".json", "_new_coord.json"), "w", encoding="utf-8"
     ) as f:
-        json.dump(train, f, ensure_ascii=False, indent=2)
+        json.dump(data, f, ensure_ascii=False, indent=2)
     return
 
 
@@ -116,6 +153,7 @@ def convert_annotation(tif_file_path, json_file_path_train, json_file_path_manua
     num_of_files = len(features_train)
     crop_tif(tif_file_path, json_file_path_train)
 
+    circle_to_polygon(json_file_path_manual)
     json_to_new_coordinates(tif_file_path, json_file_path_manual)
 
     with open(json_file_path_manual.replace(".json", "_new_coord.json"), "r") as f:
@@ -133,36 +171,33 @@ def convert_annotation(tif_file_path, json_file_path_train, json_file_path_manua
         lower_right_x = gt[0] + width * gt[1] + height * gt[2]  # xmax
         lower_right_y = gt[3] + width * gt[4] + height * gt[5]  # ymin
 
-        outfile = open(f"data/labels/train/output_crop_raster_{i}.txt", "a+")
+        with open(f"data/labels/train/output_crop_raster_{i}.txt", "w") as txt:
+            for feature in features:
+                sum = 0
+                coordinates = feature["geometry"]["coordinates"][0]
+                for i in range(len(coordinates)):
+                    if (upper_left_x <= coordinates[i][0] <= lower_right_x) & (
+                        lower_right_y <= coordinates[i][1] <= upper_left_y
+                    ):
+                        sum += 1
 
-        for feature in features:
-            sum = 0
-            coordinates = feature["geometry"]["coordinates"][0]
-            for i in range(len(coordinates)):
-                if (upper_left_x <= coordinates[i][0] <= lower_right_x) & (
-                    lower_right_y <= coordinates[i][1] <= upper_left_y
-                ):
-                    sum += 1
-
-            if sum == len(coordinates):
-                box_coordinates = get_box_coordinates(feature)
-                class_id = 0
-                box = get_pixel_values(
-                    box_coordinates,
-                    (upper_left_x, upper_left_y),
-                    (px_size_x, px_size_y),
-                )
-                bounding_box = convert((width, height), box)
-                outfile.write(
-                    str(class_id)
-                    + " "
-                    + " ".join(
-                        [str(bbox_coordinate) for bbox_coordinate in bounding_box]
+                if sum == len(coordinates):
+                    box_coordinates = get_box_coordinates(feature)
+                    class_id = 0
+                    box = get_pixel_values(
+                        box_coordinates,
+                        (upper_left_x, upper_left_y),
+                        (px_size_x, px_size_y),
                     )
-                    + "\n"
-                )
-
-        outfile.close()
+                    bounding_box = convert((width, height), box)
+                    txt.write(
+                        str(class_id)
+                        + " "
+                        + " ".join(
+                            [str(bbox_coordinate) for bbox_coordinate in bounding_box]
+                        )
+                        + "\n"
+                    )
 
 
 if __name__ == "__main__":
