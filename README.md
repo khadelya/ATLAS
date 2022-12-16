@@ -12,8 +12,6 @@ Place the following files in the input_data directory :
 - *_ANNOTATIONS_TRAIN.json - GeoJSON file containing areas in which objects are labelled.
 - *_ANNOTATIONS_MANUAL.json - GeoJSON file containing labels of objects to be detected (with Polygons).
 
-Check whether *_ANNOTATIONS_MANUAL.json is tagged with Polygons (otherwise it won't work).
-
 Change dataset.yml (names -> name of the class to be detected), worker-config.json (paths to *.tif and *.json files).
 
 
