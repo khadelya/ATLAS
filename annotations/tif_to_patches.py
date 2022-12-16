@@ -2,8 +2,8 @@ from osgeo import gdal
 import json
 import os
 
-XSIZE = 640
-YSIZE = 640
+XSIZE = 1280
+YSIZE = 1280
 
 """ Read env variable """
 NOTFOUND = "NOTFOUND"
@@ -35,6 +35,7 @@ def tif_to_patches(tif_file_path):
                 f"data/temp/crop_tif_{i}.tif",
                 tif_file_path,
                 srcWin=window,
+                noData=0
             )
             i += 1
     return
