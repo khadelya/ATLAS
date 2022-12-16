@@ -88,16 +88,17 @@ def crop_tif(tif_file_path, json_file_path):
     with open(json_file_path.replace(".json", "_new_coord.json"), "r") as f:
         train = json.load(f)
         features = train["features"]
-        for i in range(len(features)):
-            xmin = train["features"][i]["geometry"]["coordinates"][0][0][0]
-            ymin = train["features"][i]["geometry"]["coordinates"][0][0][1]
-            xmax = train["features"][i]["geometry"]["coordinates"][0][2][0]
-            ymax = train["features"][i]["geometry"]["coordinates"][0][1][1]
+        for count, feature in enumerate(features):
+            xmin = feature["geometry"]["coordinates"][0][0][0]
+            ymin = feature["geometry"]["coordinates"][0][0][1]
+            xmax = feature["geometry"]["coordinates"][0][2][0]
+            ymax = feature["geometry"]["coordinates"][0][1][1]
             window = (xmin, ymax, xmax, ymin)
             gdal.Translate(
-                f"data/images/train/output_crop_raster_{i}.tif",
+                f"data/images/train/output_crop_raster_{count}.tif",
                 tif_file_path,
                 projWin=window,
+                noData=0,
             )
     return
 
@@ -106,9 +107,9 @@ def get_box_coordinates(feature):
     x_list = []
     y_list = []
     coordinates = feature["geometry"]["coordinates"][0]
-    for i in range(len(coordinates)):
-        x_list.append(coordinates[i][0])
-        y_list.append(coordinates[i][1])
+    for coordinate in coordinates:
+        x_list.append(coordinate[0])
+        y_list.append(coordinate[1])
 
     xmin = min(x_list)
     ymax = max(y_list)
@@ -175,9 +176,9 @@ def convert_annotation(tif_file_path, json_file_path_train, json_file_path_manua
             for feature in features:
                 sum = 0
                 coordinates = feature["geometry"]["coordinates"][0]
-                for i in range(len(coordinates)):
-                    if (upper_left_x <= coordinates[i][0] <= lower_right_x) & (
-                        lower_right_y <= coordinates[i][1] <= upper_left_y
+                for coordinate in coordinates:
+                    if (upper_left_x <= coordinate[0] <= lower_right_x) & (
+                        lower_right_y <= coordinate[1] <= upper_left_y
                     ):
                         sum += 1
 
