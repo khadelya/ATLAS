@@ -50,8 +50,9 @@ RUN pip install \
     pyproj \
     geojson \
     --extra-index-url https://download.pytorch.org/whl/cu113
-    
+
 COPY annotations /usr/src/yolov5/annotations
 
 COPY entrypoint.sh /usr/bin/
+RUN sed -i 's/fl_gamma: 0.0/fl_gamma: 1.5/' /usr/src/yolov5/data/hyps/hyp.scratch-high.yaml
 ENTRYPOINT entrypoint.sh
