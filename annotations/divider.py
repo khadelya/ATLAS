@@ -9,8 +9,10 @@ PATH_TO_LABELS_VAL = "data/labels/val"
 PATH_TO_IMAGES_VAL = "data/images/val"
 
 
-def files_divider(files):
-    files_test, files_val = train_test_split(files, train_size=0.8)
+def files_divider(files, TEST_SIZE):
+    files_test, files_val = train_test_split(
+        files, test_size=TEST_SIZE, random_state=42
+    )
     for file in files:
         if file in files_val:
             source_tif = os.path.join(PATH_TO_IMAGES_TRAIN, file.replace("txt", "tif"))
@@ -34,11 +36,9 @@ def divide_files():
             background_images.append(file)
         else:
             images_with_objects.append(file)
-    files_divider(images_with_objects)
-    files_divider(background_images)
+    files_divider(images_with_objects, 0.2)
+    files_divider(background_images, 0.1)
 
 
 if __name__ == "__main__":
     divide_files()
-
-
